@@ -1,8 +1,7 @@
-// backend/database.js
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-// Path to our SQLite database file
+
 const DB_PATH = path.resolve(__dirname, 'bank.db');
 
 let db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
@@ -10,7 +9,7 @@ let db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CRE
         console.error('Error opening database', err.message);
     } else {
         console.log('Connected to the SQLite database.');
-        // Create tables if they don't exist
+        
         db.run(`CREATE TABLE IF NOT EXISTS Customers (
             customer_id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
@@ -45,7 +44,7 @@ let db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CRE
             if (err) console.error("Error creating Payments table:", err.message);
         });
 
-        // Add a dummy customer for testing
+        
         db.run(`INSERT OR IGNORE INTO Customers (customer_id, name) VALUES ('cust_123', 'Alice Smith')`, (err) => {
             if (err) console.error("Error inserting dummy customer:", err.message);
             else console.log("Dummy customer 'Alice Smith' ensured.");
