@@ -1,21 +1,17 @@
-// backend/server.js
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const { v4: uuidv4 } = require('uuid'); // For unique IDs
-const db = require('./database'); // Our database connection
+const { v4: uuidv4 } = require('uuid'); 
+const db = require('./database');
 
 const app = express();
 const PORT = 5000;
 
-// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 
-// Base URL for API
 const API_BASE_URL = '/api/v1';
 
-// Helper function to calculate interest and EMI
 function calculateLoanDetails(principal, loanPeriodYears, interestRate) {
     const totalInterest = principal * loanPeriodYears * (interestRate / 100);
     const totalAmount = principal + totalInterest;
@@ -23,7 +19,6 @@ function calculateLoanDetails(principal, loanPeriodYears, interestRate) {
     return { totalInterest, totalAmount, monthlyEmi };
 }
 
-// 2.1. LEND: Create a new loan (POST /loans)
 app.post(`${API_BASE_URL}/loans`, (req, res) => {
     const { customer_id, loan_amount, loan_period_years, interest_rate_yearly } = req.body;
 
@@ -31,7 +26,7 @@ app.post(`${API_BASE_URL}/loans`, (req, res) => {
         return res.status(400).json({ error: 'Missing required loan parameters.' });
     }
 
-    // Basic validation for numbers
+    
     if (isNaN(loan_amount) || isNaN(loan_period_years) || isNaN(interest_rate_yearly)) {
         return res.status(400).json({ error: 'Loan amount, period, and interest rate must be numbers.' });
     }
@@ -56,7 +51,6 @@ app.post(`${API_BASE_URL}/loans`, (req, res) => {
     );
 });
 
-// 2.2. PAYMENT: Record a payment for a loan (POST /loans/{loan_id}/payments)
 app.post(`${API_BASE_URL}/loans/:loan_id/payments`, (req, res) => {
     const { loan_id } = req.params;
     const { amount, payment_type } = req.body;
@@ -83,7 +77,7 @@ app.post(`${API_BASE_URL}/loans/:loan_id/payments`, (req, res) => {
         const newOutstandingBalance = loan.total_amount - amount;
         let newEmisLeft = Math.ceil(newOutstandingBalance / loan.monthly_emi);
 
-        // If lump sum makes the balance negative or zero, set EMIs left to 0 and status to PAID_OFF
+        
         if (newOutstandingBalance <= 0) {
             newEmisLeft = 0;
         }
@@ -99,14 +93,14 @@ app.post(`${API_BASE_URL}/loans/:loan_id/payments`, (req, res) => {
                         return res.status(500).json({ error: 'Failed to record payment.' });
                     }
 
-                    // Update loan's total_amount and status
+                    
                     const loanStatus = newOutstandingBalance <= 0 ? 'PAID_OFF' : 'ACTIVE';
                     db.run(`UPDATE Loans SET total_amount = ?, status = ? WHERE loan_id = ?`,
                         [newOutstandingBalance, loanStatus, loan_id],
                         function (err) {
                             if (err) {
                                 console.error("Error updating loan after payment:", err.message);
-                                // Potentially roll back the payment here in a real system
+                                
                                 return res.status(500).json({ error: 'Failed to update loan after payment.' });
                             }
                             res.status(200).json({
@@ -124,7 +118,7 @@ app.post(`${API_BASE_URL}/loans/:loan_id/payments`, (req, res) => {
     });
 });
 
-// 2.3. LEDGER: View loan details and transaction history (GET /loans/{loan_id}/ledger)
+
 app.get(`${API_BASE_URL}/loans/:loan_id/ledger`, (req, res) => {
     const { loan_id } = req.params;
 
@@ -168,7 +162,7 @@ app.get(`${API_BASE_URL}/loans/:loan_id/ledger`, (req, res) => {
     });
 });
 
-// 2.4. ACCOUNT OVERVIEW: View all loans for a customer (GET /customers/{customer_id}/overview)
+
 app.get(`${API_BASE_URL}/customers/:customer_id/overview`, (req, res) => {
     const { customer_id } = req.params;
 
@@ -186,7 +180,7 @@ app.get(`${API_BASE_URL}/customers/:customer_id/overview`, (req, res) => {
             const initialTotalAmount = loan.principal_amount + (loan.principal_amount * loan.loan_period_years * (loan.interest_rate / 100));
             const totalInterest = initialTotalAmount - loan.principal_amount;
 
-            // Calculate amount paid by summing up all payments for this loan
+            
             const payments = await new Promise((resolve, reject) => {
                 db.all(`SELECT amount FROM Payments WHERE loan_id = ?`, [loan.loan_id], (err, p) => {
                     if (err) reject(err);
@@ -195,7 +189,7 @@ app.get(`${API_BASE_URL}/customers/:customer_id/overview`, (req, res) => {
             });
             const amountPaid = payments.reduce((sum, p) => sum + p.amount, 0);
 
-            const balanceAmount = loan.total_amount; // Current outstanding balance
+            const balanceAmount = loan.total_amount; 
             const emisLeft = balanceAmount > 0 ? Math.ceil(balanceAmount / loan.monthly_emi) : 0;
 
             loansWithDetails.push({
@@ -217,7 +211,7 @@ app.get(`${API_BASE_URL}/customers/:customer_id/overview`, (req, res) => {
     });
 });
 
-// Start the server
+
 app.listen(PORT, () => {
     console.log(`Backend server running on http://localhost:${PORT}`);
 });
